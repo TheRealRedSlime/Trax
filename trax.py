@@ -111,7 +111,7 @@ class GameView(arcade.View):
             tile.update()
         # Call update() on the sprite lists that need it
 
-    def get_adjacents(row, column) :
+    def get_adjacents(self, row, column) :
         return [self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]] for delta in DELTAS if self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]].alpha == 255]
         # off_grid = s_row >= ROW_COUNT or s_column >= COLUMN_COUNT or s_row < 0 or s_column < 0
 
