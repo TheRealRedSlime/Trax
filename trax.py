@@ -57,7 +57,7 @@ NEUTRAL = arcade.Sprite(path_or_texture = "1111.png", angle = 0.0, alpha=0)
 NEUTRAL.recto = False
 NEUTRAL.alpha = 0
 
-def side_color(tile:arcade.Sprite, side:int=None) -> int :
+def side_tocolor(tile:arcade.Sprite, side:int=None) :
     side_clrs = [["b","n","n","b"] if tile.recto else ["b","n","b", "n"]][0]
     for i in range(int(tile.angle)//90) : 
         side_clrs = [side_clrs[-1]] +side_clrs[:-1]
@@ -65,6 +65,11 @@ def side_color(tile:arcade.Sprite, side:int=None) -> int :
         return side_clrs[side]
     else : return side_clrs
 
+def color_tosides(tile:arcade.Sprite, color:str) :
+    side_clrs = [["b","n","n","b"] if tile.recto else ["b","n","b", "n"]][0]
+    for i in range(int(tile.angle)//90) : 
+        side_clrs = [side_clrs[-1]] +side_clrs[:-1]
+    return [i for i, x in enumerate(side_clrs) if x == color]
 
 
 def reverse_contraintes(contraintes) :
@@ -115,6 +120,42 @@ class GameView(arcade.View):
         return {delta["side_tuile"] : self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]] for delta in DELTAS if self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]].alpha == 255}
         # off_grid = s_row >= ROW_COUNT or s_column >= COLUMN_COUNT or s_row < 0 or s_column < 0
 
+    def walk(self, current_tile, color, current_side, origin_tile) -> bool :
+        if current_tile.alpha != 255 : return None
+        next_sides = color_tosides(current_tile, color)
+        next_sides.remove(current_side)
+        next_side = next_sides[0]
+
+        curr_row, curr_column = int(current_tile.center_y // HEIGHT), int(current_tile.center_x // WIDTH)
+        delta = [delta for delta in DELTAS if delta["side_tuile"]==next_side][0]
+        next_row, next_column = curr_row+delta["Δcoos"][1], curr_column+delta["Δcoos"][0]
+        next_tile = self.grid_tiles[next_row][next_column]
+        if next_tile != origin_tile :
+            return self.walk(next_tile, color, (next_side+2)%4, origin_tile)
+        else :
+            return color
+
+    def check_winner(self, row, column) :
+        origin_tile = self.grid_tiles[row][column]
+        adjacents = self.get_adjacents(row, column)
+        # { side_tuile:Sprite, side_tuile:Sprite}
+        if len(adjacents) >= 2 :
+            colors = {
+                "b" : [],
+                "n" : []
+            }
+            for side_origin,concerned_tile in adjacents.items() :
+                colors[side_tocolor(origin_tile, side=side_origin)].append([side_origin,concerned_tile])
+            # colors = {"b":[[origin_side, tile], [origin_side]], "n":[]}
+            # donc tile_side = (origin_side+2)%4
+
+            for color, tiles in colors.items() :
+                if len(tiles)<=1 : pass
+                else :
+                    winner = self.walk(tiles[0][1], color, (tiles[0][0]+2)%4, origin_tile)
+                    print(winner)
+                    return winner
+
     def detect_playable_slots_tile(self, coos_tuile) :
         playable = {}
         column, row = coos_tuile
@@ -126,7 +167,7 @@ class GameView(arcade.View):
                 current_tile = self.grid_tiles[s_row][s_column]
             
                 if current_tile.alpha != 255 :
-                    color = side_color(self.grid_tiles[row][column], side = delta["side_tuile"])
+                    color = side_tocolor(self.grid_tiles[row][column], side = delta["side_tuile"])
                     
                     if coos_slot in self.playable_slots : # s'il y a déjà une contrainte sur le slot
                         self.playable_slots[coos_slot][delta["side_slot"]] = color # {side1:color1, side2:color2}
@@ -169,7 +210,7 @@ class GameView(arcade.View):
 
 
                     x=0
-                    while not (side_color(tile, side=sides[0]) == side_color(tile, side=sides[1]) == color) :
+                    while not (side_tocolor(tile, side=sides[0]) == side_tocolor(tile, side=sides[1]) == color) :
                         tile.angle = (tile.angle + 90.0) % 360.0
                         x+=1
                         if x>= 5 : 
@@ -200,10 +241,8 @@ class GameView(arcade.View):
         if button not in [1,4] : return
 
         adjacents = self.get_adjacents(row, column)
-        print(adjacents)
-        contraintes = {side:side_color(adj_tile, side=(side+2)%4) for side,adj_tile in adjacents.items()}
-        respected = [side_color(tile, side=side)==color for side,color in contraintes.items()]
-        print(contraintes)
+        contraintes = {side:side_tocolor(adj_tile, side=(side+2)%4) for side,adj_tile in adjacents.items()}
+        respected = [side_tocolor(tile, side=side)==color for side,color in contraintes.items()]
 
         if tile.recto == CLIC[button]["recto"] and (all(respected) or adjacents=={}) :
             match tile.alpha :
@@ -212,6 +251,7 @@ class GameView(arcade.View):
                 case 255 : tile.alpha = 90
             self.play_forced(coos_tuile=[column, row])
             self.detect_playable_slots_plateau()
+            self.check_winner(row, column)
         else :
             tile.recto = CLIC[button]["recto"]
             tile.texture = CLIC[button]["texture"]
@@ -289,4 +329,16 @@ if __name__ == "__main__":
         -> call func check_selected_tiles(coos_tile_clicked)
         -> If exists Tile with coos != coos_tile_clicked
             -> Then Tile.reset() ------> angle=0.0 & Alpha=0
+
+
+        Call it every time a tile is placed
+        it detects the adjacent ones
+        it stores them in a style {"b":[tile, tile], "n":[]}
+        if a color has 2 elements :
+            takes the sides with color
+
+
+        faire une fonction relation(tile1, tile2)
+
 """
+
