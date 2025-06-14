@@ -200,7 +200,7 @@ class GameView(arcade.View):
         tile = self.grid_tiles[row][column]
 
 
-        if button not in [1,4] : return
+        if button not in [1,4] or tile.alpha == 0.0 : return
         if tile.recto == CLIC[button]["recto"] :
             match tile.alpha :
                 case 90 :
