@@ -112,7 +112,7 @@ class GameView(arcade.View):
         # Call update() on the sprite lists that need it
 
     def get_adjacents(self, row, column) :
-        return [self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]] for delta in DELTAS if self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]].alpha == 255]
+        return {delta["side_tuile"] : self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]] for delta in DELTAS if self.grid_tiles[row+delta["Δcoos"][1]][column+delta["Δcoos"][0]].alpha == 255}
         # off_grid = s_row >= ROW_COUNT or s_column >= COLUMN_COUNT or s_row < 0 or s_column < 0
 
     def detect_playable_slots_tile(self, coos_tuile) :
@@ -192,30 +192,32 @@ class GameView(arcade.View):
         self.grid_tiles_list.draw()
 
     def on_mouse_press(self, x, y, button, modifiers):
-        # Convert the clicked mouse position into grid coordinates
         row, column = int(y // HEIGHT), int(x // WIDTH)
-        # Make sure we are on-grid. It is possible to click in a location that doesn't exist
+
         if row >= ROW_COUNT or column >= COLUMN_COUNT: # Nothing needs updating
             return
         tile = self.grid_tiles[row][column]
+        if button not in [1,4] : return
 
+        adjacents = self.get_adjacents(row, column)
+        print(adjacents)
+        contraintes = {side:side_color(adj_tile, side=(side+2)%4) for side,adj_tile in adjacents.items()}
+        respected = [side_color(tile, side=side)==color for side,color in contraintes.items()]
+        print(contraintes)
 
-        if button not in [1,4] or tile.alpha == 0.0 : return
-        if tile.recto == CLIC[button]["recto"] :
+        if tile.recto == CLIC[button]["recto"] and (all(respected) or adjacents=={}) :
             match tile.alpha :
-                case 90 :
-                    tile.alpha = 255
-                case 255 :
-                    tile.alpha = 90
+                case 0 : return
+                case 90 : tile.alpha = 255
+                case 255 : tile.alpha = 90
+            self.play_forced(coos_tuile=[column, row])
+            self.detect_playable_slots_plateau()
         else :
             tile.recto = CLIC[button]["recto"]
             tile.texture = CLIC[button]["texture"]
             if tile.alpha == 90 :
                 self.curr_args["recto"] = CLIC[button]["recto"]
                 self.curr_args["texture"] = CLIC[button]["texture"]
-        coos_tuile = [column, row]
-        self.play_forced(coos_tuile=coos_tuile)
-        self.detect_playable_slots_plateau()
 
     def on_mouse_motion(self, x, y, dx, dy):
         row, column = int(y // HEIGHT), int(x // WIDTH)
