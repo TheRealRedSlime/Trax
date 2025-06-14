@@ -249,7 +249,6 @@ class GameView(arcade.View):
 
         self.curr_mouse_tile = [row, column]
 
-
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y) :
         # Convert the clicked mouse position into grid coordinates
         row, column = int(y // HEIGHT), int(x // WIDTH)
@@ -260,7 +259,6 @@ class GameView(arcade.View):
         tile.angle = (tile.angle + scroll_y * 90.0) % 360.0
         if tile.alpha == 90 :
             self.curr_args["angle"] = tile.angle
-
 
     def on_key_press(self, symbol, modifiers):
         pass
@@ -286,10 +284,6 @@ if __name__ == "__main__":
 
 
 """ IDEAS :
-        Quand curseur dessus : N&B
-        Quand clic : ON/OFF couleur + alpha
-        Quand play button : couleur
-
 
         Click on X-Tile but W-Tile alrdy clicked
         -> call func check_selected_tiles(coos_tile_clicked)
